@@ -16,12 +16,18 @@ const SELF_DESTRUCT_HOLD = 4;
 const TOOTHPICK_CORE_COLOR = 0x7be38f;
 const TOOTHPICK_EDGE_COLOR = 0x2f8d47;
 const TOOTHPICK_TIP_COLOR = 0xb7ffc6;
+const BGM_PATH = "./assets/tom-and-jerry-bgm.mp3";
+const BGM_VOLUME = 0.42;
 
 const keys = new Set();
 const shots = [];
 let winner = null;
 let accumulator = 0;
 let simTime = 0;
+let bgmStarted = false;
+const bgmAudio = new Audio(BGM_PATH);
+bgmAudio.loop = true;
+bgmAudio.volume = BGM_VOLUME;
 
 const hamsterShape = [
   { x: 0, y: 0, r: 18 },
@@ -584,7 +590,16 @@ async function boot() {
     statusEl.textContent = "대결 시작!";
   }
 
+  function ensureBgmPlayback() {
+    if (bgmStarted) return;
+    bgmStarted = true;
+    bgmAudio.play().catch(() => {
+      bgmStarted = false;
+    });
+  }
+
   window.addEventListener("keydown", (e) => {
+    ensureBgmPlayback();
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
       e.preventDefault();
     }
@@ -627,6 +642,8 @@ async function boot() {
       }
     }
   });
+
+  window.addEventListener("pointerdown", ensureBgmPlayback, { passive: true });
 
   resetGame();
 
