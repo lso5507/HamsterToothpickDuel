@@ -61,3 +61,147 @@ h1 {
   width: 100% !important;
   height: 100% !important;
 }
+
+.menu {
+  width: min(90vw, 480px);
+  padding: 32px 24px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 82%, black);
+  border: 1px solid #2b3440;
+  text-align: center;
+}
+
+.menu h1 {
+  font-size: 2rem;
+  margin-bottom: 32px;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.menu-btn {
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  background: linear-gradient(135deg, var(--accent-a) 0%, #e89a2e 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 177, 77, 0.3);
+}
+
+.menu-btn:active {
+  transform: translateY(0);
+}
+
+.menu-btn:nth-child(2),
+.menu-btn:nth-child(3) {
+  background: linear-gradient(135deg, var(--accent-b) 0%, #4fa8e6 100%);
+}
+
+.menu-btn:nth-child(2):hover,
+.menu-btn:nth-child(3):hover {
+  box-shadow: 0 4px 12px rgba(121, 196, 255, 0.3);
+}
+
+.menu-btn-small {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--accent-a);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 4px;
+}
+
+.menu-btn-small:hover {
+  opacity: 0.9;
+}
+
+.join-container {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.join-container input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid #2b3440;
+  border-radius: 6px;
+  outline: none;
+}
+
+.join-container input:focus {
+  border-color: var(--accent-b);
+}
+
+.room-info {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.room-info p {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
+.room-info input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid #2b3440;
+  border-radius: 6px;
+  text-align: center;
+}
+
+#waiting-text {
+  color: var(--accent-a);
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.leave-btn {
+  margin-top: 12px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #2b3440;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.leave-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}

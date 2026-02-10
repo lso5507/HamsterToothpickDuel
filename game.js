@@ -1,3 +1,8 @@
+let gameMode = null;
+let gameInstance = null;
+
+const menuEl = document.getElementById("menu");
+const gameContainer = document.getElementById("game-container");
 const gameRoot = document.getElementById("game");
 const statusEl = document.getElementById("status");
 
@@ -20,6 +25,8 @@ const BGM_PATH = "./assets/tom-and-jerry-bgm.mp3";
 const BGM_VOLUME = 0.42;
 
 const keys = new Set();
+const player0Keys = new Set();
+const player1Keys = new Set();
 const shots = [];
 let winner = null;
 let accumulator = 0;
@@ -233,6 +240,7 @@ function drawShot(shot) {
 
 async function boot() {
   const app = new PIXI.Application();
+  gameInstance = { app };
   await app.init({
     width: W,
     height: H,
@@ -316,13 +324,9 @@ async function boot() {
       y: H / 2,
       dirX: -1,
       dirY: 0,
-      controls: {
-        up: "ArrowUp",
-        down: "ArrowDown",
-        left: "ArrowLeft",
-        right: "ArrowRight",
-        fire: "ShiftRight",
-      },
+      controls: gameMode === "local" 
+        ? { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", fire: "ShiftRight" }
+        : { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", fire: "ShiftLeft" },
       cooldown: 0,
       color: 0x79c4ff,
       hitColor: 0xb7e4ff,
@@ -459,12 +463,13 @@ async function boot() {
   function updatePlayer(player, dt) {
     if (!player.alive) return;
     const c = player.controls;
+    const playerKeys = (gameMode === "local") ? keys : (player.id === 1 ? player0Keys : player1Keys);
     let mx = 0;
     let my = 0;
-    if (keys.has(c.left)) mx -= 1;
-    if (keys.has(c.right)) mx += 1;
-    if (keys.has(c.up)) my -= 1;
-    if (keys.has(c.down)) my += 1;
+    if (playerKeys.has(c.left)) mx -= 1;
+    if (playerKeys.has(c.right)) mx += 1;
+    if (playerKeys.has(c.up)) my -= 1;
+    if (playerKeys.has(c.down)) my += 1;
 
     if (mx !== 0 || my !== 0) {
       const d = norm(mx, my);
@@ -604,48 +609,165 @@ async function boot() {
       e.preventDefault();
     }
     if (e.code === "KeyR") {
-      resetGame();
+      if (gameMode === "local") {
+        resetGame();
+      } else if ((gameMode === "online-host" || gameMode === "online-guest") && winner) {
+        if (gameMode === "online-host") {
+          networkManager.sendReset();
+        }
+        resetGame();
+      }
       return;
     }
     if (e.repeat) return;
-    keys.add(e.code);
-    if (e.code === players[0].controls.fire && players[0].alive && !winner) {
-      players[0].chargeActive = true;
-      players[0].chargeStart = simTime;
-      players[0].chargeSeconds = 0;
-    }
-    if (e.code === players[1].controls.fire && players[1].alive && !winner) {
-      players[1].chargeActive = true;
-      players[1].chargeStart = simTime;
-      players[1].chargeSeconds = 0;
+
+    if (gameMode === "local") {
+      keys.add(e.code);
+      if (e.code === players[0].controls.fire && players[0].alive && !winner) {
+        players[0].chargeActive = true;
+        players[0].chargeStart = simTime;
+        players[0].chargeSeconds = 0;
+      }
+      if (e.code === players[1].controls.fire && players[1].alive && !winner) {
+        players[1].chargeActive = true;
+        players[1].chargeStart = simTime;
+        players[1].chargeSeconds = 0;
+      }
+    } else if (gameMode === "online-host") {
+      const p0Controls = players[0].controls;
+      if (Object.values(p0Controls).includes(e.code)) {
+        player0Keys.add(e.code);
+        networkManager.sendInput("keydown", e.code);
+        if (e.code === p0Controls.fire && players[0].alive && !winner) {
+          players[0].chargeActive = true;
+          players[0].chargeStart = simTime;
+          players[0].chargeSeconds = 0;
+        }
+      }
+    } else if (gameMode === "online-guest") {
+      const p1Controls = players[1].controls;
+      if (Object.values(p1Controls).includes(e.code)) {
+        player1Keys.add(e.code);
+        networkManager.sendInput("keydown", e.code);
+        if (e.code === p1Controls.fire && players[1].alive && !winner) {
+          players[1].chargeActive = true;
+          players[1].chargeStart = simTime;
+          players[1].chargeSeconds = 0;
+        }
+      }
     }
   });
 
   window.addEventListener("keyup", (e) => {
-    keys.delete(e.code);
-
-    if (e.code === players[0].controls.fire && players[0].chargeActive) {
-      const held = simTime - players[0].chargeStart;
-      players[0].chargeActive = false;
-      players[0].chargeSeconds = 0;
-      if (players[0].alive && !winner && held < SELF_DESTRUCT_HOLD) {
-        fireFrom(players[0], held);
+    if (gameMode === "local") {
+      keys.delete(e.code);
+      if (e.code === players[0].controls.fire && players[0].chargeActive) {
+        const held = simTime - players[0].chargeStart;
+        players[0].chargeActive = false;
+        players[0].chargeSeconds = 0;
+        if (players[0].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+          fireFrom(players[0], held);
+        }
       }
-    }
-
-    if (e.code === players[1].controls.fire && players[1].chargeActive) {
-      const held = simTime - players[1].chargeStart;
-      players[1].chargeActive = false;
-      players[1].chargeSeconds = 0;
-      if (players[1].alive && !winner && held < SELF_DESTRUCT_HOLD) {
-        fireFrom(players[1], held);
+      if (e.code === players[1].controls.fire && players[1].chargeActive) {
+        const held = simTime - players[1].chargeStart;
+        players[1].chargeActive = false;
+        players[1].chargeSeconds = 0;
+        if (players[1].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+          fireFrom(players[1], held);
+        }
+      }
+    } else if (gameMode === "online-host") {
+      const p0Controls = players[0].controls;
+      if (Object.values(p0Controls).includes(e.code)) {
+        player0Keys.delete(e.code);
+        networkManager.sendInput("keyup", e.code);
+        if (e.code === p0Controls.fire && players[0].chargeActive) {
+          const held = simTime - players[0].chargeStart;
+          players[0].chargeActive = false;
+          players[0].chargeSeconds = 0;
+          if (players[0].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+            fireFrom(players[0], held);
+          }
+        }
+      }
+    } else if (gameMode === "online-guest") {
+      const p1Controls = players[1].controls;
+      if (Object.values(p1Controls).includes(e.code)) {
+        player1Keys.delete(e.code);
+        networkManager.sendInput("keyup", e.code);
+        if (e.code === p1Controls.fire && players[1].chargeActive) {
+          const held = simTime - players[1].chargeStart;
+          players[1].chargeActive = false;
+          players[1].chargeSeconds = 0;
+          if (players[1].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+            fireFrom(players[1], held);
+          }
+        }
       }
     }
   });
 
   window.addEventListener("pointerdown", ensureBgmPlayback, { passive: true });
 
+  if (gameMode === "online-host") {
+    networkManager.onInputReceived = (data) => {
+      console.log('[HOST] Received from guest:', data.eventType, data.code);
+      if (data.eventType === "keydown") {
+        player1Keys.add(data.code);
+        if (data.code === players[1].controls.fire && players[1].alive && !winner) {
+          players[1].chargeActive = true;
+          players[1].chargeStart = simTime;
+          players[1].chargeSeconds = 0;
+        }
+      } else if (data.eventType === "keyup") {
+        player1Keys.delete(data.code);
+        if (data.code === players[1].controls.fire && players[1].chargeActive) {
+          const held = simTime - players[1].chargeStart;
+          players[1].chargeActive = false;
+          players[1].chargeSeconds = 0;
+          if (players[1].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+            fireFrom(players[1], held);
+          }
+        }
+      }
+    };
+  } else if (gameMode === "online-guest") {
+    networkManager.onInputReceived = (data) => {
+      console.log('[GUEST] Received from host:', data.eventType, data.code);
+      if (data.eventType === "keydown") {
+        player0Keys.add(data.code);
+        if (data.code === players[0].controls.fire && players[0].alive && !winner) {
+          players[0].chargeActive = true;
+          players[0].chargeStart = simTime;
+          players[0].chargeSeconds = 0;
+        }
+      } else if (data.eventType === "keyup") {
+        player0Keys.delete(data.code);
+        if (data.code === players[0].controls.fire && players[0].chargeActive) {
+          const held = simTime - players[0].chargeStart;
+          players[0].chargeActive = false;
+          players[0].chargeSeconds = 0;
+          if (players[0].alive && !winner && held < SELF_DESTRUCT_HOLD) {
+            fireFrom(players[0], held);
+          }
+        }
+      }
+    };
+    
+    networkManager.onResetReceived = () => {
+      resetGame();
+    };
+  }
+
   resetGame();
+
+  const guideEl = document.querySelector(".guide");
+  if (gameMode === "local") {
+    guideEl.textContent = "1P: WASD + Left Shift | 2P: Arrow Keys + Right Shift | R: 재시작";
+  } else {
+    guideEl.textContent = "조작: WASD + Left Shift | R: 게임 종료 후 재시작 가능";
+  }
 
   app.ticker.add((ticker) => {
     const dt = Math.min(0.05, ticker.deltaMS / 1000);
@@ -665,4 +787,144 @@ async function boot() {
   });
 }
 
-boot();
+function initMenu() {
+  const btnLocal = document.getElementById("btn-local");
+  const btnCreateRoom = document.getElementById("btn-create-room");
+  const btnJoinRoom = document.getElementById("btn-join-room");
+  const btnJoinConfirm = document.getElementById("btn-join-confirm");
+  const btnJoinCancel = document.getElementById("btn-join-cancel");
+  const btnCopyLink = document.getElementById("btn-copy-link");
+  const btnLeave = document.getElementById("btn-leave");
+  
+  const joinInputContainer = document.getElementById("join-input-container");
+  const roomIdInput = document.getElementById("room-id-input");
+  const roomInfo = document.getElementById("room-info");
+  const inviteLink = document.getElementById("invite-link");
+  const waitingText = document.getElementById("waiting-text");
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomParam = urlParams.get('room');
+
+  if (roomParam) {
+    joinRoom(roomParam);
+    return;
+  }
+
+  btnLocal.addEventListener("click", () => {
+    gameMode = "local";
+    startGame();
+  });
+
+  btnCreateRoom.addEventListener("click", async () => {
+    try {
+      gameMode = "online-host";
+      btnCreateRoom.disabled = true;
+      btnCreateRoom.textContent = "방 생성 중...";
+      
+      await networkManager.createRoom();
+      inviteLink.value = networkManager.getInviteLink();
+      roomInfo.style.display = "block";
+      
+      networkManager.onConnected = () => {
+        waitingText.style.display = "none";
+        startGame();
+      };
+
+      networkManager.onDisconnected = () => {
+        alert("상대방과의 연결이 끊어졌습니다.");
+        returnToMenu();
+      };
+    } catch (err) {
+      alert("방 생성 실패: " + err.message);
+      btnCreateRoom.disabled = false;
+      btnCreateRoom.textContent = "온라인 - 방 만들기";
+    }
+  });
+
+  btnJoinRoom.addEventListener("click", () => {
+    joinInputContainer.style.display = "block";
+    roomIdInput.focus();
+  });
+
+  btnJoinCancel.addEventListener("click", () => {
+    joinInputContainer.style.display = "none";
+    roomIdInput.value = "";
+  });
+
+  btnJoinConfirm.addEventListener("click", () => {
+    const roomId = roomIdInput.value.trim().toUpperCase();
+    if (roomId) {
+      joinRoom(roomId);
+    }
+  });
+
+  roomIdInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      btnJoinConfirm.click();
+    }
+  });
+
+  btnCopyLink.addEventListener("click", () => {
+    inviteLink.select();
+    navigator.clipboard.writeText(inviteLink.value);
+    btnCopyLink.textContent = "복사 완료!";
+    setTimeout(() => {
+      btnCopyLink.textContent = "복사";
+    }, 2000);
+  });
+
+  btnLeave.addEventListener("click", () => {
+    returnToMenu();
+  });
+
+  async function joinRoom(roomId) {
+    try {
+      gameMode = "online-guest";
+      menuEl.style.display = "none";
+      gameContainer.style.display = "block";
+      statusEl.textContent = "연결 중...";
+
+      await networkManager.joinRoom(roomId);
+      
+      networkManager.onConnected = () => {
+        statusEl.textContent = "연결 완료! 게임 시작!";
+        startGame();
+      };
+
+      networkManager.onDisconnected = () => {
+        alert("호스트와의 연결이 끊어졌습니다.");
+        returnToMenu();
+      };
+    } catch (err) {
+      alert("방 참여 실패: " + err.message);
+      returnToMenu();
+    }
+  }
+
+  function startGame() {
+    menuEl.style.display = "none";
+    gameContainer.style.display = "block";
+    boot();
+  }
+
+  function returnToMenu() {
+    networkManager.disconnect();
+    if (gameInstance && gameInstance.app) {
+      gameInstance.app.destroy(true);
+    }
+    gameRoot.innerHTML = "";
+    gameContainer.style.display = "none";
+    menuEl.style.display = "block";
+    
+    document.getElementById("room-info").style.display = "none";
+    document.getElementById("join-input-container").style.display = "none";
+    document.getElementById("room-id-input").value = "";
+    document.getElementById("btn-create-room").disabled = false;
+    document.getElementById("btn-create-room").textContent = "온라인 - 방 만들기";
+    document.getElementById("waiting-text").style.display = "block";
+    
+    gameMode = null;
+  }
+}
+
+initMenu();

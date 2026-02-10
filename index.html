@@ -7,16 +7,42 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="wrap">
+    <!-- 메인 메뉴 -->
+    <div id="menu" class="menu">
+      <h1>Hamster Toothpick Duel</h1>
+      <div class="menu-buttons">
+        <button id="btn-local" class="menu-btn">로컬 플레이</button>
+        <button id="btn-create-room" class="menu-btn">온라인 - 방 만들기</button>
+        <button id="btn-join-room" class="menu-btn">온라인 - 참여하기</button>
+      </div>
+      <div id="join-input-container" class="join-container" style="display: none;">
+        <input type="text" id="room-id-input" placeholder="방 ID 입력" />
+        <button id="btn-join-confirm" class="menu-btn-small">참여</button>
+        <button id="btn-join-cancel" class="menu-btn-small">취소</button>
+      </div>
+      <div id="room-info" class="room-info" style="display: none;">
+        <p>초대 링크:</p>
+        <input type="text" id="invite-link" readonly />
+        <button id="btn-copy-link" class="menu-btn-small">복사</button>
+        <p id="waiting-text">상대방을 기다리는 중...</p>
+      </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <main class="wrap" id="game-container" style="display: none;">
       <h1>Hamster Toothpick Duel</h1>
       <p class="guide">
         1P: WASD + Left Shift | 2P: Arrow Keys + Right Shift | R: 재시작
       </p>
       <div id="game" aria-label="hamster duel game"></div>
       <p id="status" class="status">대기 중...</p>
+      <button id="btn-leave" class="leave-btn">메뉴로 돌아가기</button>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js" defer></script>
-    <script src="game.js" defer></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="network.js"></script>
+    <script src="game.js"></script>
   </body>
 </html>
