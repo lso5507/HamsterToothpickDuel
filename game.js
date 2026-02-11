@@ -301,13 +301,18 @@ async function boot() {
   bg.roundRect(0, H * 0.645, W, 8, 4).fill({ color: 0xaf7a45, alpha: 0.9 });
   world.addChild(bg);
 
+  const spawnPoints = [
+    { x: 150, y: H / 2, dirX: 1, dirY: 0 },
+    { x: W - 150, y: H / 2, dirX: -1, dirY: 0 },
+  ];
+
   const players = [
     {
       id: 1,
-      x: 150,
-      y: H / 2,
-      dirX: 1,
-      dirY: 0,
+      x: spawnPoints[0].x,
+      y: spawnPoints[0].y,
+      dirX: spawnPoints[0].dirX,
+      dirY: spawnPoints[0].dirY,
       controls: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", fire: "ShiftLeft" },
       cooldown: 0,
       color: 0xf4b14d,
@@ -320,10 +325,10 @@ async function boot() {
     },
     {
       id: 2,
-      x: W - 150,
-      y: H / 2,
-      dirX: -1,
-      dirY: 0,
+      x: spawnPoints[1].x,
+      y: spawnPoints[1].y,
+      dirX: spawnPoints[1].dirX,
+      dirY: spawnPoints[1].dirY,
       controls: gameMode === "local" 
         ? { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", fire: "ShiftRight" }
         : { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", fire: "ShiftLeft" },
@@ -560,34 +565,34 @@ async function boot() {
     }
   }
 
+  function resetPlayerState(player, spawnPoint) {
+    player.x = spawnPoint.x;
+    player.y = spawnPoint.y;
+    player.dirX = spawnPoint.dirX;
+    player.dirY = spawnPoint.dirY;
+    player.cooldown = 0;
+    player.alive = true;
+    player.chargeActive = false;
+    player.chargeStart = 0;
+    player.chargeSeconds = 0;
+    player.sprite.visible = true;
+    player.sprite.alpha = 1;
+    player.sprite.scale.set(1, 1);
+    player.sprite.x = player.x;
+    player.sprite.y = player.y;
+    updateHamsterSpear(player.sprite, player.dirX, player.dirY);
+  }
+
   function resetGame() {
     simTime = 0;
+    accumulator = 0;
 
-    players[0].x = 150;
-    players[0].y = H / 2;
-    players[0].dirX = 1;
-    players[0].dirY = 0;
-    players[0].cooldown = 0;
-    players[0].alive = true;
-    players[0].chargeActive = false;
-    players[0].chargeStart = 0;
-    players[0].chargeSeconds = 0;
-    players[0].sprite.visible = true;
-    players[0].sprite.alpha = 1;
-    players[0].sprite.scale.set(1, 1);
+    keys.clear();
+    player0Keys.clear();
+    player1Keys.clear();
 
-    players[1].x = W - 150;
-    players[1].y = H / 2;
-    players[1].dirX = -1;
-    players[1].dirY = 0;
-    players[1].cooldown = 0;
-    players[1].alive = true;
-    players[1].chargeActive = false;
-    players[1].chargeStart = 0;
-    players[1].chargeSeconds = 0;
-    players[1].sprite.visible = true;
-    players[1].sprite.alpha = 1;
-    players[1].sprite.scale.set(1, 1);
+    resetPlayerState(players[0], spawnPoints[0]);
+    resetPlayerState(players[1], spawnPoints[1]);
 
     for (const s of shots) s.gfx.destroy();
     shots.length = 0;
